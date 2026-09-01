@@ -1,0 +1,102 @@
+# Source registry.
+#
+# Every source this project reads is declared here. Nothing is fetched that is
+# not in this file, and every fetch is snapshotted, hashed, and dated so any
+# figure in the output can be traced back to the bytes it came from.
+#
+# `kind: register`     -> tells us WHERE a product is registered
+# `kind: requirements` -> tells us WHAT it takes to register
+
+registers:
+  - id: nafdac_greenbook
+    country: NG
+    country_name: Nigeria
+    authority: NAFDAC
+    authority_full: National Agency for Food and Drug Administration and Control
+    kind: register
+    landing_url: https://greenbook.nafdac.gov.ng/
+    data_url: https://greenbook.nafdac.gov.ng
+    transport: datatables_json
+    # Fields this register exposes that we rely on downstream.
+    provides:
+      inn: ingredient_name
+      atc: atc
+      strength: strength
+      dosage_form: form_name
+      route: route_name
+      applicant: applicant_name
+      registration_number: NAFDAC
+      approval_date: approval_date
+      status: status
+    notes: >
+      Server-side DataTables endpoint. Richest of the three registers: carries
+      ATC classification, which is the strongest cross-register join key
+      available. Applicant name is what lets us isolate a company portfolio.
+
+  - id: zamra_register
+    country: ZM
+    country_name: Zambia
+    authority: ZAMRA
+    authority_full: Zambia Medicines Regulatory Authority
+    kind: register
+    landing_url: https://www.zamra.co.zm/registers/
+    data_url: https://app.zamra.co.zm:42882/portal/
+    transport: unknown
+    provides: {}
+    notes: >
+      Portal on a non-standard port. Transport unconfirmed at time of writing —
+      must be probed before any claim rests on it.
+
+  - id: tmda_approved_products
+    country: TZ
+    country_name: Tanzania
+    authority: TMDA
+    authority_full: Tanzania Medicines and Medical Devices Authority
+    kind: register
+    landing_url: https://www.tmda.go.tz/pages/approved-product-information
+    data_url: https://www.tmda.go.tz/pages/approved-product-information
+    transport: unknown
+    provides: {}
+    notes: >
+      Publishes SmPCs and public assessment reports (TPAR). Coverage is a
+      subset of all registrations, not the full register — this limit must be
+      stated wherever Tanzania figures appear.
+
+requirements:
+  - id: tmda_guidelines
+    country: TZ
+    authority: TMDA
+    kind: requirements
+    landing_url: https://www.tmda.go.tz/documents/medicines-guidelines
+    notes: 15 guideline documents, direct PDF links, dated 2015-2023.
+
+  - id: zamra_guidelines
+    country: ZM
+    authority: ZAMRA
+    kind: requirements
+    landing_url: https://www.zamra.co.zm/guidelines/
+    notes: CTD-format guidance. SADC CTD and WHO multisource basis.
+
+  - id: who_crp
+    country: MULTI
+    authority: WHO
+    kind: requirements
+    landing_url: https://www.who.int/teams/regulation-prequalification/regulation-and-safety/facilitated-product-introduction/collaborative-registration-procedure
+    notes: >
+      Collaborative Registration Procedure. Participating-country lists and FAQ
+      are published as PDFs. Target decision time 90 working days.
+
+  - id: zazibona
+    country: MULTI
+    authority: SADC
+    kind: requirements
+    landing_url: https://www.tmda.go.tz/pages/the-zazibona-collaorative-medicines-registration-procedure
+    notes: >
+      SADC collaborative procedure. 16 member countries, 9 active contributors.
+
+# Declared unusable. Recorded so the decision is visible rather than silently
+# absent, and so nobody wastes time re-discovering it.
+excluded:
+  - id: auda_nepad_amrh
+    landing_url: https://amrh.nepad.org/amrh-countries/
+    reason: Returns HTTP 403 to automated requests. Manual reference only.
