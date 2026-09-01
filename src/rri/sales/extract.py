@@ -152,29 +152,30 @@ class RuleExtractor:
             out.append({"kind": kind, "value": value, "quote": quote,
                         "confidence": confidence})
 
-        for canonical, terms in MARKET_TERMS.items():
+        def first_match(terms, kind, value, confidence):
+            """One fact per category, not one per matching synonym.
+
+            A note saying both "dossier preparation" and "CTD" is asking for one
+            service, not two. Emitting a fact per matching term would double
+            count it downstream.
+            """
             for term in terms:
-                for m in re.finditer(rf"\b{re.escape(term)}\b", lowered):
-                    add("market", canonical, text[m.start():m.end()], 0.95)
-                    break
+                match = re.search(rf"\b{re.escape(term)}\b", lowered)
+                if match:
+                    add(kind, value, text[match.start():match.end()], confidence)
+                    return
+
+        for canonical, terms in MARKET_TERMS.items():
+            first_match(terms, "market", canonical, 0.95)
 
         for region, terms in REGION_TERMS.items():
-            for term in terms:
-                for m in re.finditer(rf"\b{re.escape(term)}\b", lowered):
-                    add("market", f"region:{region}", text[m.start():m.end()], 0.8)
-                    break
+            first_match(terms, "market", f"region:{region}", 0.8)
 
         for service, terms in SERVICE_TERMS.items():
-            for term in terms:
-                for m in re.finditer(rf"\b{re.escape(term)}\b", lowered):
-                    add("service", service, text[m.start():m.end()], 0.9)
-                    break
+            first_match(terms, "service", service, 0.9)
 
         for ptype, terms in PRODUCT_TYPE_TERMS.items():
-            for term in terms:
-                for m in re.finditer(rf"\b{re.escape(term)}\b", lowered):
-                    add("product_type", ptype, text[m.start():m.end()], 0.85)
-                    break
+            first_match(terms, "product_type", ptype, 0.85)
 
         for m in VOLUME_RE.finditer(text):
             add("volume", m.group(1), m.group(0), 0.9)
@@ -183,9 +184,7 @@ class RuleExtractor:
             add("timing", m.group(1).strip(), m.group(0), 0.85)
 
         for term in CONSTRAINT_TERMS:
-            for m in re.finditer(rf"\b{re.escape(term)}\b", lowered):
-                add("constraint", term, text[m.start():m.end()], 0.7)
-                break
+            first_match([term], "constraint", term, 0.7)
 
         # Ingredients, matched against what the registers actually contain.
         # Longest first so "amoxicillin clavulanic acid" wins over "amoxicillin".
