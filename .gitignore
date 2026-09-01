@@ -1,0 +1,19 @@
+# Virtualenv and bytecode
+.venv/
+__pycache__/
+*.pyc
+
+# Cached source documents, around 330 MB of health authority PDFs.
+# Not committed. They are re-fetchable from the URLs recorded in the snapshot
+# manifest, and the manifest carries the sha256 of what was retrieved, so
+# provenance survives without shipping the bytes.
+data/raw/
+
+# Snapshot payloads, around 64 MB. Same reasoning: data/snapshots/manifest.jsonl
+# is committed and records the source, URL, retrieval date, record count and
+# hash of every retrieval. The payloads themselves are reproducible.
+data/snapshots/*/
+
+# Build output, reproducible from the snapshots.
+data/reports/
+data/web/

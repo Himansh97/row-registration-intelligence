@@ -1,0 +1,10 @@
+anthropic==1.2.0
+duckdb==1.5.5
+httpx==0.28.1
+pandas==3.0.5
+pdfplumber==0.11.10
+pytest==9.1.1
+PyYAML==6.0.3
+RapidFuzz==3.14.5
+selectolax==0.4.11
+streamlit==1.62.0
