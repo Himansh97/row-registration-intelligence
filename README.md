@@ -133,6 +133,19 @@ A citation that does not resolve is indistinguishable from a fabricated one.
 
 ## Running it
 
+### Run it locally
+
+```bash
+./.venv/bin/streamlit run app.py     # http://localhost:8501
+```
+
+Four tabs: the trigger feed, a discovery call scoper, company portfolios and
+market structure. It calls the same Python the tests cover, so there is no
+second implementation to keep in step, and it picks up the Claude extractor
+automatically when ANTHROPIC_API_KEY is set.
+
+### Build the corpus first
+
 ```bash
 python -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 

@@ -135,6 +135,56 @@ def build_feed(sources) -> tuple[list[dict], dict, dict]:
     return accounts, totals, per_source
 
 
+def build_scoping(records) -> dict:
+    """Everything the browser needs to scope a call note.
+
+    The matching that matters stays here. Who holds what in which market is
+    computed in Python, by the same code the tests cover, and shipped as a
+    lookup table. The browser does string matching against shipped vocabularies
+    and reads that table. It never resolves an entity of its own.
+    """
+    from collections import defaultdict
+
+    from rri.sales.extract import (MARKET_TERMS, PRODUCT_TYPE_TERMS,
+                                   REGION_TERMS, SERVICE_TERMS)
+
+    # Distinct companies are tracked in a set. Counting off the truncated name
+    # list instead would keep incrementing for companies already seen once the
+    # list is full, which inflates the count.
+    seen: dict = defaultdict(set)
+    index: dict = defaultdict(lambda: {"n": 0, "who": []})
+    for r in records:
+        if not (r.is_active and r.is_medicine) or not r.company_raw:
+            continue
+        for inn in r.inn:
+            if len(inn) < 5:
+                continue
+            key = f"{r.country}|{inn}"
+            if r.company_raw in seen[key]:
+                continue
+            seen[key].add(r.company_raw)
+            entry = index[key]
+            entry["n"] += 1
+            # Every holder name is kept, not a sample. Truncating the list would
+            # silently break the "already held" check for any client sitting
+            # past the cut, and that check is the most valuable thing the scoper
+            # produces. The full list costs about 120 KB.
+            entry["who"].append(r.company_raw)
+
+    ingredients = sorted({i for r in records for i in r.inn if len(i) >= 5})
+
+    return {
+        "ingredients": ingredients,
+        "holders": dict(index),
+        "vocab": {
+            "market": MARKET_TERMS,
+            "region": REGION_TERMS,
+            "service": SERVICE_TERMS,
+            "product_type": PRODUCT_TYPE_TERMS,
+        },
+    }
+
+
 def build_changes() -> dict:
     """What moved between the two most recent snapshots of each source.
 
@@ -286,6 +336,7 @@ def main() -> int:
             "sources": feed_sources_meta,
         },
         "changes": build_changes(),
+        "scoping": build_scoping(records + (br if br_cov else [])),
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -304,6 +355,9 @@ def main() -> int:
           f"{sum(1 for s in ch['sources'] if s['has_history'])} source(s) with history")
     for country, meta in sorted(feed_sources_meta.items()):
         print(f"   {country}  {meta['authority']:<18} {meta['triggers']:>6,} triggers")
+    sc = payload["scoping"]
+    print(f"scoping        {len(sc['ingredients']):,} ingredients, "
+          f"{len(sc['holders']):,} market-ingredient entries")
     print(f"payload        {OUT.relative_to(REPO_ROOT)}  ({size_kb:.0f} KB)")
     return 0
 
