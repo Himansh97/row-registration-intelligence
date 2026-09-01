@@ -277,6 +277,76 @@ Brazil filings need to be done by Q3 2027 because of a tender."""
             width='stretch', hide_index=True,
         )
 
+    how_it_works(note)
+
+
+def how_it_works(note: str) -> None:
+    """The mechanism, demonstrated live on whatever note is in the box.
+
+    Explaining that a model cannot fabricate through this is weaker than
+    showing it, so this runs the real extraction path against deliberately
+    invented proposals and prints what happens to them.
+    """
+    with st.expander("How this works, and why a model cannot invent a client"):
+        st.markdown(
+            "Whatever proposes a fact, a regular expression or a language model, "
+            "has to hand back the words that support it. Those words are then "
+            "located in the note. If they are not there, the fact is dropped.\n\n"
+            "That single check is what makes a model safe here. It cannot invent "
+            "a product the client never mentioned, because the quote backing the "
+            "invention would not appear in the note."
+        )
+
+        class Planted:
+            """Proposes two things that are not in the note, and one that is."""
+
+            name = "planted"
+
+            def __init__(self, source):
+                first = next((w for w in source.split() if len(w) > 6), "the")
+                self._p = [
+                    {"kind": "product", "value": "rivaroxaban",
+                     "quote": "they also mentioned rivaroxaban", "confidence": 0.99},
+                    {"kind": "market", "value": "IN",
+                     "quote": "expanding into India", "confidence": 0.95},
+                    {"kind": "constraint", "value": first,
+                     "quote": first, "confidence": 0.6},
+                ]
+
+            def propose(self, text):
+                return self._p
+
+        from rri.sales.extract import extract as run_extract
+
+        kept, rejected = run_extract(note, Planted(note))
+        st.markdown("**Fed three proposals against the note above:**")
+        for r in rejected:
+            st.error(f"Rejected. Claimed **{r.get('value')}**, quoting "
+                     f"\u201c{r.get('quote')}\u201d. {r['reason']}.")
+        for f in kept:
+            st.success(f"Kept. Claimed **{f.value}**, quoting "
+                       f"\u201c{f.span.text}\u201d, which is in the note.")
+        st.caption(
+            "Confidence 0.99 does not rescue an unsupported fact. Rejections are "
+            "returned rather than discarded, because how often an extractor "
+            "proposes things that are not in the source is a quality signal."
+        )
+
+        st.markdown("**What this will not do**")
+        st.markdown(
+            "- **No effort hours or day rates.** Registers record what is approved, "
+            "never what it costs. A made up number is discredited by the first "
+            "person who signs those contracts.\n"
+            "- **No review times.** Approval dates say when a registration was "
+            "granted, not how long review took. Without a submission date that "
+            "duration is not observable, so none is offered.\n"
+            "- **No invented scope.** A line is only produced for a product, market "
+            "and service the client actually raised.\n"
+            "- **No status claims.** Absence from a register is reported as what a "
+            "search returned on a date, never as a statement about whether a "
+            "product is registered."
+        )
+
 
 def page_company(corpus, sources):
     st.header("Company view")
